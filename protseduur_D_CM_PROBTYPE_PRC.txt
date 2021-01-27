@@ -1,0 +1,241 @@
+CREATE OR REPLACE PROCEDURE EEDWH_STG."D_CM_PROBTYPE_PRC" 
+
+IS 
+
+ 
+BEGIN 
+ 
+ 
+ 
+    --Tühjendame abi temp tabeli, mida me kasutame, et vaid ühe korra päringut jooksutada 
+   EXECUTE IMMEDIATE 'TRUNCATE  TABLE EEDWH_STG.D_CM_PROBTYPE_TEMP'; 
+ 
+    COMMIT; 
+ 
+ 
+   
+      INSERT INTO   
+       
+                                EEDWH_STG.D_CM_PROBTYPE_TEMP
+                                
+               
+ 
+SELECT sub.SEQ_NR, 
+       sub.CUSTPROB_CD, 
+       sub.CUSTPROB_DESC, 
+       sub.CUSTPROB_USER_ID, 
+       sub.CUSTPROB_DAYS, 
+       sub.CUSTPROB_TODO_TYPE_CD, 
+       sub.CUSTPROB_CC_TYPE_CD, 
+       sub.CUSTPROB_CC_CL_CD, 
+       sub.DELETED_DTTM, 
+       sub.DELETED_FLG, 
+ CASE 
+                                      WHEN TRIM(D_CM_PROBTYPE.SEQ_NR) IS NULL  
+                                      THEN  
+                                          1 
+                                   
+                                  --    WHEN NVL(TRIM(SUB.CASE_COND_FLG), 'N/A') <> NVL(TRIM(D_CASE.CASE_COND_FLG), 'N/A')  
+                                --      THEN  
+                                  --       2 
+                                    
+ 
+                                      WHEN      SUB.CUSTPROB_CD = D_CM_PROBTYPE.CUSTPROB_CD 
+                                             AND SUB.CUSTPROB_DESC          = D_CM_PROBTYPE.CUSTPROB_DESC
+                                             AND SUB.CUSTPROB_USER_ID = D_CM_PROBTYPE.CUSTPROB_USER_ID 
+                                             AND SUB.CUSTPROB_DAYS = D_CM_PROBTYPE.CUSTPROB_DAYS 
+                                             AND SUB.CUSTPROB_TODO_TYPE_CD = D_CM_PROBTYPE.CUSTPROB_TODO_TYPE_CD 
+                                             AND SUB.CUSTPROB_CC_TYPE_CD = D_CM_PROBTYPE.CUSTPROB_CC_TYPE_CD 
+                                             AND SUB.CUSTPROB_CC_CL_CD =D_CM_PROBTYPE.CUSTPROB_CC_CL_CD 
+                                             AND SUB.DELETED_DTTM =D_CM_PROBTYPE.DELETED_DTTM  
+                                             AND SUB.DELETED_FLG =D_CM_PROBTYPE.DELETED_FLG 
+                                      THEN  
+                                          0 
+                                      ELSE  
+                                          3 
+                                  END 
+                                      INS_UPD 
+                                , D_CM_PROBTYPE.CASE_CHAR_KEY 
+                                , SYSDATE DATA_LOAD_DTTM 
+ 
+from 
+(SELECT NVL ("ST2_CI_WFM_OPT"."SEQ_NUM", 0) "SEQ_NUM",
+       NVL (TRIM ("ST2_CI_WFM_OPT"."WFM_OPT_VAL"), 'N/A') "CUSTPROB_CD",
+       NVL (TRIM ("VAL"."DESCR"), 'N/A') "CUSTPROB_DESC",
+       NVL (TRIM ("CUSUSERID"."WFM_OPT_VAL"), 'N/A') "CUSTPROB_USER_ID",
+       NVL (TRIM ("CUSTDAYS"."WFM_OPT_VAL"), 'N/A') "CUSTPROB_DAYS",
+       NVL (TRIM ("CUSTPROBTODO"."WFM_OPT_VAL"), 'N/A') "CUSTPROB_DAYS",
+       NVL (TRIM ("CUSTPROBCCTYPE"."WFM_OPT_VAL"), 'N/A')
+          "CUSTPROB_CC_TYPE_CD",
+       NVL (TRIM ("CUSTPROBCCCL"."WFM_OPT_VAL"), 'N/A') "CUSTPROB_CC_CL_CD"
+  FROM "ST2_CI_WFM_OPT" "ST2_CI_WFM_OPT"
+       JOIN (SELECT NVL ("ST2_CI_CHAR_VAL_L"."DESCR", 'N/A') "DESCR",
+                    TRIM ( (NVL ("ST2_CI_CHAR_VAL_L"."CHAR_VAL", NULL)))
+                       "CHAR_VAL"
+               FROM    "ST2_CI_CHAR_VAL_L" "ST2_CI_CHAR_VAL_L"
+                    JOIN
+                       "ST2_CI_WFM_OPT" "ST2_CI_WFM_OPT"
+                    ON ( ( ("ST2_CI_CHAR_VAL_L"."LANGUAGE_CD" = 'EST'))
+                        AND ( ("ST2_CI_CHAR_VAL_L"."CHAR_TYPE_CD" =
+                                  'CUSTPROB'))
+                        AND ( (TRIM ("ST2_CI_CHAR_VAL_L"."CHAR_VAL") =
+                                  TRIM ("ST2_CI_WFM_OPT"."WFM_OPT_VAL"))))
+              WHERE ("ST2_CI_WFM_OPT"."WFM_NAME" = 'CM-PROBTYPE')
+                    AND ("ST2_CI_WFM_OPT"."EXT_OPT_TYPE" = 'XPRT')) "VAL"
+          ON ( (TRIM ("ST2_CI_WFM_OPT"."WFM_OPT_VAL") =
+                   TRIM ("VAL"."CHAR_VAL")))
+       -----------------------------------CUSTPROB_USER_ID
+
+       LEFT OUTER JOIN (SELECT "ST2_CI_WFM_OPT"."WFM_OPT_VAL" "WFM_OPT_VAL",
+                               "ST2_CI_WFM_OPT"."SEQ_NUM" "SEQ_NUM"
+                          FROM "ST2_CI_WFM_OPT" "ST2_CI_WFM_OPT"
+                         WHERE ("ST2_CI_WFM_OPT"."WFM_NAME" = 'CM-PROBTYPE')
+                               AND ("ST2_CI_WFM_OPT"."EXT_OPT_TYPE" = 'XRSU')) "CUSUSERID"
+          ON ( ("CUSUSERID"."SEQ_NUM" = "ST2_CI_WFM_OPT"."SEQ_NUM"))
+       -------------------------------CUSTPROB_DAYS
+       LEFT OUTER JOIN (SELECT "ST2_CI_WFM_OPT"."WFM_OPT_VAL" "WFM_OPT_VAL",
+                               "ST2_CI_WFM_OPT"."SEQ_NUM" "SEQ_NUM"
+                          FROM "ST2_CI_WFM_OPT" "ST2_CI_WFM_OPT"
+                         WHERE ("ST2_CI_WFM_OPT"."WFM_NAME" = 'CM-PROBTYPE')
+                               AND ("ST2_CI_WFM_OPT"."EXT_OPT_TYPE" = 'XDAY')) "CUSTDAYS"
+          ON ( ("CUSTDAYS"."SEQ_NUM" = "ST2_CI_WFM_OPT"."SEQ_NUM"))
+       --------------------------------CUSTPROB_TODO_TYPE_CD
+
+       LEFT OUTER JOIN (SELECT "ST2_CI_WFM_OPT"."WFM_OPT_VAL" "WFM_OPT_VAL",
+                               "ST2_CI_WFM_OPT"."SEQ_NUM" "SEQ_NUM"
+                          FROM "ST2_CI_WFM_OPT" "ST2_CI_WFM_OPT"
+                         WHERE ("ST2_CI_WFM_OPT"."WFM_NAME" = 'CM-PROBTYPE')
+                               AND ("ST2_CI_WFM_OPT"."EXT_OPT_TYPE" = 'XTDT')) "CUSTPROBTODO"
+          ON ( ("CUSTPROBTODO"."SEQ_NUM" = "ST2_CI_WFM_OPT"."SEQ_NUM"))
+       ---------------------------------------------------
+       ----CUSTPROB_CC_TYPE_CD
+
+       LEFT OUTER JOIN (SELECT "ST2_CI_WFM_OPT"."WFM_OPT_VAL" "WFM_OPT_VAL",
+                               "ST2_CI_WFM_OPT"."SEQ_NUM" "SEQ_NUM"
+                          FROM "ST2_CI_WFM_OPT" "ST2_CI_WFM_OPT"
+                         WHERE ("ST2_CI_WFM_OPT"."WFM_NAME" = 'CM-PROBTYPE')
+                               AND ("ST2_CI_WFM_OPT"."EXT_OPT_TYPE" = 'XCCT')) "CUSTPROBCCTYPE"
+          ON ( ("CUSTPROBCCTYPE"."SEQ_NUM" = "ST2_CI_WFM_OPT"."SEQ_NUM"))
+       ----------------------------------------------------------------
+       ------CUSTPROB_CC_CL_CD
+
+       LEFT OUTER JOIN (SELECT "ST2_CI_WFM_OPT"."WFM_OPT_VAL" "WFM_OPT_VAL",
+                               "ST2_CI_WFM_OPT"."SEQ_NUM" "SEQ_NUM"
+                          FROM "ST2_CI_WFM_OPT" "ST2_CI_WFM_OPT"
+                         WHERE ("ST2_CI_WFM_OPT"."WFM_NAME" = 'CM-PROBTYPE')
+                               AND ("ST2_CI_WFM_OPT"."EXT_OPT_TYPE" = 'XCCC')) "CUSTPROBCCCL"
+          ON ( ("CUSTPROBCCCL"."SEQ_NUM" = "ST2_CI_WFM_OPT"."SEQ_NUM"))
+ WHERE ("ST2_CI_WFM_OPT"."WFM_NAME" = 'CM-PROBTYPE')
+       AND ("ST2_CI_WFM_OPT"."EXT_OPT_TYPE" = 'XPRT') ) sub  
+     
+      LEFT JOIN  
+                                      D_CM_PROBTYPE  
+                                  ON TRIM(D_CM_PROBTYPE.SEQ_NR) = TRIM(SUB.SEQ_NR);  
+                                   
+                                   
+ 
+-------------------------------------- 
+ 
+dbms_stats.gather_table_stats('EEDWH_STG','D_CM_PROBTYPE_TEMP',null,10); 
+ 
+   
+    
+ 
+   
+/* Formatted on 20.12.2011 14:03:51 (QP5 v5.163.1008.3004) */ 
+INSERT INTO D_CM_PROBTYPE (CASE_CHAR_KEY, 
+                    DATA_LOAD_DTTM, 
+                    SEQ_NR, 
+                    CUSTPROB_CD, 
+                    CUSTPROB_DESC, 
+                    CUSTPROB_USER_ID, 
+                    CUSTPROB_DAYS, 
+                    CUSTPROB_TODO_TYPE_CD, 
+                    CUSTPROB_CC_TYPE_CD, 
+                    CUSTPROB_CC_CL_CD, 
+                     DELETED_DTTM, 
+                    DELETED_FLG) 
+   SELECT D_CM_PROBTYPE_SEQ.NEXTVAL AS CASE_CHAR_KEY, 
+                    DATA_LOAD_DTTM, 
+                    SEQ_NR, 
+                    CUSTPROB_CD, 
+                    CUSTPROB_DESC, 
+                    CUSTPROB_USER_ID, 
+                    CUSTPROB_DAYS, 
+                    CUSTPROB_TODO_TYPE_CD, 
+                    CUSTPROB_CC_TYPE_CD, 
+                    CUSTPROB_CC_CL_CD, 
+                     DELETED_DTTM, 
+                    DELETED_FLG
+     FROM D_CM_PROBTYPE_TEMP
+    WHERE INS_UPD IN (1); 
+     
+  
+   
+ 
+UPDATE 
+                             D_CM_PROBTYPE
+    SET 
+                              ( 
+                 --    DATA_LOAD_DTTM, 
+                    SEQ_NR, 
+                    CUSTPROB_CD, 
+                    CUSTPROB_DESC, 
+                    CUSTPROB_USER_ID, 
+                    CUSTPROB_DAYS, 
+                    CUSTPROB_TODO_TYPE_CD, 
+                    CUSTPROB_CC_TYPE_CD, 
+                    CUSTPROB_CC_CL_CD, 
+                    DELETED_DTTM, 
+                    DELETED_FLG
+                              ) = (SELECT 
+            ---      D_CASE_TEMP.DATA_LOAD_DTTM,                                      
+                D_CM_PROBTYPE.SEQ_NR, 
+                D_CM_PROBTYPE.CUSTPROB_CD, 
+                D_CM_PROBTYPE.CUSTPROB_DESC, 
+                D_CM_PROBTYPE.CUSTPROB_USER_ID, 
+                D_CM_PROBTYPE.CUSTPROB_DAYS, 
+                D_CM_PROBTYPE.CUSTPROB_TODO_TYPE_CD, 
+                D_CM_PROBTYPE.CUSTPROB_CC_TYPE_CD, 
+                 D_CM_PROBTYPE.CUSTPROB_CC_CL_CD, 
+                 D_CM_PROBTYPE.DELETED_DTTM, 
+                 D_CM_PROBTYPE.DELETED_FLG
+                                     FROM 
+                                                                D_CM_PROBTYPE_TEMP 
+                                     WHERE 
+                                                                     1 = 1 
+                                                                AND D_CM_PROBTYPE_TEMP.INS_UPD = 3 
+                                                                AND D_CM_PROBTYPE_TEMP.CASE_KEY =D_CM_PROBTYPE.CASE_CHAR_KEY) 
+    WHERE 
+                              EXISTS 
+                                  (SELECT 
+                                                              1 
+                                    FROM 
+                                                             D_CM_PROBTYPE_TEMP 
+                                    WHERE 
+                                                                    1 = 1 
+                                                              AND D_CM_PROBTYPE_TEMP.INS_UPD = 3 
+                                                              AND D_CM_PROBTYPE_TEMP.CASE_CHAR_KEY =D_CM_PROBTYPE.CASE_CHAR_KEY); 
+ 
+    --Tühjendame abi temp tabeli, mida me kasutame, et vaid ühe korra päringut jooksutada 
+    EXECUTE IMMEDIATE 'TRUNCATE  TABLE EEDWH_STG.D_CM_PROBTYPE_TEMP'; 
+   
+          
+ 
+  
+ 
+COMMIT; 
+ 
+  EXCEPTION 
+    WHEN OTHERS 
+   THEN 
+      DBMS_OUTPUT.PUT_LINE(SQLERRM); 
+ 
+        DECLARE 
+            E EXCEPTION; 
+        BEGIN 
+            DBMS_OUTPUT.PUT_LINE(SQLERRM); 
+            RAISE E; 
+        END; 
+END;
+/
